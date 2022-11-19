@@ -29,14 +29,19 @@ def tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, b
                  num_exp = 8, num_mantissa = 23, radix_exp = 2, block_size = 16, 
                  radix_mantissa = 2, is_tensor = True):
     """
-    block_size: number of elements in a block (default)
-    t_value: 
+    block_size: number of elements in desired output block (default 16 elements)
+    t_value: 1-D flattened vector of fp32 elements
+        WARNING: size of t_value should be multiple of block_size
+    
     """
     
     #NOTE: Shared field should be in the beginning
     #NOTE: Exponent, then positive (total 8 bits of information)
     
-    #GENERATE MASKS
+# =============================================================================
+#     generate masks 
+# =============================================================================
+    
     MAN_MASK = 0x007FFFFF 
     EXP_MASK = 0x7F800000
     SIGN_MASK = 0x80000000
@@ -45,6 +50,10 @@ def tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, b
     GUARD_RIGHT = 0x00000001
     GUARD_MID = 0x00000002 
     GUARD_LEFT = 0x00000004
+    
+# =============================================================================
+#     
+# =============================================================================
     
     # This mask is shifted to the right by reduce_num
     # Upper bits ORd with 1's
@@ -95,12 +104,15 @@ def tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, b
     num_mantissa_save = num_mantissa
     convert_x = tf.bitcast(x, tf.int32)
     
+    
+    
     sign_bit = bitwise_ops.bitwise_and(convert_x, SIGN_MASK)
     exp_bits = bitwise_ops.bitwise_and(convert_x, EXP_MASK)
     man_bits = bitwise_ops.bitwise_and(convert_x, MAN_MASK)
     
-    exp_bits = bitwise_ops.right_shift(exp_bits,23)
-    max_exp = tf.math.reduce_max(exp_bits, 1, keepdims=True)
+    exp_bits = bitwise_ops.right_shift(exp_bits,23)    
+    #max_exp = tf.math.reduce_max(exp_bits,1, keepdims=True)
+    max_exp = tf.math.reduce_max(exp_bits)
     
     # look to see if we need deepcopy here
     saved_exp_bits = exp_bits
@@ -133,9 +145,13 @@ def tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, b
     total_elements =  tf.size(bool_sign_bit)
     
     #NOTE: Do we need to divide by two?
-    num_blocks = total_elements // (block_size // 2)
+    #num_blocks = total_elements // (block_size // 2)
     
-    flattened_sign = tf.reshape(bool_sign_bit, [num_blocks, (block_size // 2)])
+    num_blocks = total_elements // block_size
+    
+    flattened_sign = tf.reshape(bool_sign_bit, [num_blocks, (block_size)])
+    
+    tf.print(flattened_sign)
     
     # alternative_neg_sign = tf.where(tf.equal(t_value,0.0), 1, 0)
     # alternative_neg_sign = tf.where(bool_sign_bit, 1, alternative_neg_sign)  
@@ -523,12 +539,12 @@ def tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, b
 # %%
 
 #Create 16 element vector with numbers [0,15]
-t_value = np.arange(0,16)
+t_value = np.arange(0,128000)
 t_value = tf.convert_to_tensor(t_value, dtype = tf.float32) 
 
 tf.print(t_value)
 
-tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, block_round_mode = "fine_grain_2_contiguous_exponent_reuse",num_exp = 8, num_mantissa = 23, radix_exp = 2, block_size = 128, radix_mantissa = 2, is_tensor = True)
+AFP_OUT = tf_custom_round(t_value, round_mode = "truncate", skip_processing = False, block_round_mode = "fine_grain_2_contiguous_exponent_reuse",num_exp = 8, num_mantissa = 23, radix_exp = 2, block_size = 16, radix_mantissa = 2, is_tensor = True)
 
-
+tf.print(AFP_OUT,summarize=128)
 
