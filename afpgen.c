@@ -41,18 +41,23 @@ char* genAFP_b16(float * v_in, __uint32_t size_in)
 /*
 genAFPHelper_b16
 
-helper function to generate 16-element blocked AFP
+purpose: helper function to generate 16-element blocked AFP
 
 v_in: 16-element array of float32
+
+output: pointer to 17 element byte array (16 element of AFP values with shared field is last element)
 */
-char* genAFPHelper_b16(float * v_in){
+uint8_t* genAFPHelper_b16(float * v_in){
+
+    //array that will store 16 element AFP values and shared field
+    uint8_t result[17];
     
     //FIND MAX EXPONENT
-    unsigned char maxExp = 0;
+    uint8_t maxExp = 0;
     bool allPos = 1;
 
     U1 conv;
-    for (short i = 0; i < 16; i++)
+    for (uint8_t i = 0; i < 16; i++)
     {
         //use union to convert between floating point and bitwise views
         conv.f = v_in[i];
@@ -61,29 +66,65 @@ char* genAFPHelper_b16(float * v_in){
         allPos = allPos && !(conv.i>>31);
 
         //logic to obtain maxExp
-        unsigned char curr = (conv.i & MASK_EXP) >> 23;
+        uint8_t curr = (conv.i & MASK_EXP) >> 23;
         if (curr > maxExp)
         {
             maxExp = curr;
         }
     }
-    noop;
-    noop;
+
+    //assigns 
+    for (uint8_t i = 0; i < 16; i++)
+    {
+        conv.f = v_in[i];
+        uint8_t currExp = (conv.i & MASK_EXP) >> 23;
+        uint32_t currMantissa = (conv.i & MASK_MANTISSA);
+        bool currSign = conv.i & MASK_SIGN;
+        
+
+
+    }
 
     
 
 
 }
 
+/**
+ * @brief 
+ * 
+ * @param sign 
+ * @param mantissa a 23 bit right-aligned mantissa
+ * @param offset a 3 bit offset from the max exponent
+ * @return an 8 bit AFP value with [sign, offset, mantissa] with bit width [1,3,4] respectively.
+ */
+uint8_t roundNearestEven(bool sign, uint32_t mantissa, uint8_t offset) {
+    uint32_t result;
+    
+    //lsb (fourth most significant bit)
+    uint32_t lsb = (mantissa >> 19) & 0x1;
+    
+    //1 bit right of lsb
+    uint32_t guardBit = (mantissa >> 18) & 0x1;
 
+    //if any of the bits more than 1 right of the LSB is 1, turn on the sticky
+    uint32_t stickyBit = !!(mantissa & 0x3FFF);
 
+    if (sign){
+        //NOTE: we need to change the offset if it rounds up from largest value
+
+    }
+    else {
+
+    }
+}
 
 
 int main(){
 
     U1 conv;
     float f = -16;
-    float arr[] = {1028, 256, 8, .0625};
+    float arr[] = {1028, 256, 8, .0625,0,0,0,0,0,0,0,0,0,0,0,0};
     float out[4];
 
     genAFPHelper_b16(arr);
