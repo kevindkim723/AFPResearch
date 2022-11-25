@@ -92,7 +92,7 @@ uint8_t *genAFPHelper_b16(float *v_in)
  */
 uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
 {
-    uint32_t result;
+    uint8_t result;
 
     //lsb (fourth most significant bit)
     bool lsb = (mantissaIn >> 19) & 0x1;
@@ -177,8 +177,12 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
             offset = offsetIn-1;
         }
     }
+    // handles when offset >= 7
 
+    //offset difference from 7
     uint8_t offsetDiff = offset - 7;
+
+    //mantissa preppended with leading 1
     uint8_t mantissaOutLeadingOne = mantissaOut |= 0x10;
     if (offset == 8 || offset == 9 || offset == 10 || offset == 11)
     {
@@ -200,7 +204,12 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     // ============================================================================
     //     NORMALIZE END
     // ============================================================================
+    
 
+    // pack values into AFP
+    result |= signIn << 7;
+    result |= offsetOut << 4;
+    result |= mantissaOut;
 }
 
 int main()
