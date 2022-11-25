@@ -72,14 +72,26 @@ uint8_t *genAFPHelper_b16(float *v_in)
         }
     }
 
-    //assigns
+    //assigns blocked AFP
     for (uint8_t i = 0; i < 16; i++)
     {
         conv.f = v_in[i];
         uint8_t currExp = (conv.i & MASK_EXP) >> 23;
+        uint8_t currOffset = maxExp - currExp;
         uint32_t currMantissa = (conv.i & MASK_MANTISSA);
         bool currSign = conv.i & MASK_SIGN;
+        result[i] = roundNearestEven(currSign, currMantissa, currOffset);
     }
+    
+    //pack shared field
+    uint8_t shared;
+    shared |= maxExp;
+    shared |= (allPos << 7);
+
+    //assign shared field as last element in the block
+    result[16] = shared;
+
+    return result;
 }
 
 /**
