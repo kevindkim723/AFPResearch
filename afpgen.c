@@ -6,9 +6,7 @@
 #define MASK_MANTISSA_AFP 0x780000;
 #define noop
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include "afpgen.h"
 //union to access bit-level representation of float32
 typedef union
 {
@@ -222,6 +220,8 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     result |= signIn << 7;
     result |= offsetOut << 4;
     result |= mantissaOut;
+
+    return result;
 }
 
 int main()

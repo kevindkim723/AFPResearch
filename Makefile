@@ -1,4 +1,4 @@
-targets: afpgen.c
+targets: afpgen.c afpgen.h
 	gcc afpgen.c -o afpgen
 
 
