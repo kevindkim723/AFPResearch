@@ -26,6 +26,18 @@ void printF32(char *msg, float f)
     printf("0x%04x_%04x=%g\n", (conv.i >> 16), (conv.i & 0xFFFF), conv.f);
 }
 
+/*
+prints msg, and the binary representation and floating point representation of f
+NOTE: output can depend on machine endian-ness
+*/
+void printF32_b(char *msg, float f)
+{
+    U1 conv;
+    conv.f = f;
+    printf("%s: ", msg);
+    printf("0x%04x_%04x=%g\n", (conv.i >> 16), (conv.i & 0xFFFF), conv.f);
+}
+
 //generates AFP for 16-element blocks
 char *genAFP_b16(float *v_in, __uint32_t size_in)
 {
@@ -41,13 +53,13 @@ purpose: helper function to generate 16-element blocked AFP
 
 v_in: 16-element array of float32
 
-output: pointer to 17 element byte array (16 element of AFP values with shared field is last element)
+result: pointer to 17 element byte array (16 element of AFP values with shared field is last element)
 */
-uint8_t *genAFPHelper_b16(float *v_in)
+void genAFPHelper_b16(float *v_in, uint8_t* result)
 {
 
     //array that will store 16 element AFP values and shared field
-    uint8_t result[17];
+    //uint8_t result[17];
 
     //FIND MAX EXPONENT
     uint8_t maxExp = 0;
@@ -74,10 +86,14 @@ uint8_t *genAFPHelper_b16(float *v_in)
     for (uint8_t i = 0; i < 16; i++)
     {
         conv.f = v_in[i];
+
+        //extract sign, offset, and mantissa fields
         uint8_t currExp = (conv.i & MASK_EXP) >> 23;
         uint8_t currOffset = maxExp - currExp;
         uint32_t currMantissa = (conv.i & MASK_MANTISSA);
         bool currSign = conv.i & MASK_SIGN;
+
+        //convert to AFP
         result[i] = roundNearestEven(currSign, currMantissa, currOffset);
     }
     
@@ -89,7 +105,6 @@ uint8_t *genAFPHelper_b16(float *v_in)
     //assign shared field as last element in the block
     result[16] = shared;
 
-    return result;
 }
 
 /**
@@ -100,6 +115,7 @@ uint8_t *genAFPHelper_b16(float *v_in)
  * @param offset a 3 bit right-aligned offset from the max exponent
  * @return an 8 bit AFP value with [sign, offset, mantissa] with bit width [1,3,4] respectively.
  */
+//TODO: handle when the input is denorm, NAN, and inf
 uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
 {
     uint8_t result;
@@ -161,22 +177,22 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     // ============================================================================
     bool overflowMantissa = mantissaOut >> 4;
     bool offsetZero = !(offsetIn);
-    bool offsetEight = offsetIn == 8;
+    bool offsetGTseven = (offset > 7);
 
     if (overflowMantissa)
     {
         if (offsetZero)
         {
             // Overflow = 1, offset = 0
-            // this means that we have offset = 111, mantissa = 1111, round UP scenario
+            // this means that we have exp = 111, mantissa = 1111, round UP scenario
             // don't round up in this case
             mantissaOut = mantissa;
         }
-        else if (offsetEight)
+        else if (offsetGTseven)
         {
-            // overflow = 1, offset = 8
-            // since we overflow and offset 7 is DENORM, we can't represent the rounded up number
-            // don't round up in this case 
+            // overflow = 1, offset >= 8
+            // since we overflow into a denorm number, we must consider the missing implicit one.
+            // TODO: handle this situation
             mantissaOut = mantissa;
         }
         else
@@ -187,17 +203,30 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
             offset = offsetIn-1;
         }
     }
-    // handles when offset >= 7
 
+    // ============================================================================
+    //     NORMALIZE END
+    // ============================================================================
+    // NOTE: at this point we have an offset and a 4-bit mantissa in mantissaOut with an implied leading 1. If offset >= 7 then we must convert to a denorm.
+    // mantissaOut = 1.mmmm
+
+    // ============================================================================
+    //     HANDLE DENORM BEGIN
+    // ============================================================================
+
+    // NOTE: at this stage, our offset could be >= 7 so we swizzle our number if it's a denorm.
     //offset difference from 7
     uint8_t offsetDiff = offset - 7;
 
     //mantissa preppended with leading 1
-    uint8_t mantissaOutLeadingOne = mantissaOut |= 0x10;
+    uint8_t mantissaOutLeadingOne = mantissaOut;
+    mantissaOutLeadingOne |= 0x10;
     if (offset == 8 || offset == 9 || offset == 10 || offset == 11)
     {
         //offset LARGE, can still represent mantissa data
-        mantissaOut = mantissaOutLeadingOne >> offsetDiff;
+
+        //shift accordingly
+        mantissaOut = mantissaOutLeadingOne >> (offsetDiff+1);
         offsetOut = 7;
     }
     else if (offset > 12)
@@ -212,9 +241,9 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
         noop;
     }
     // ============================================================================
-    //     NORMALIZE END
+    //     HANDLE DENORM END
     // ============================================================================
-    
+
 
     // pack values into AFP
     result |= signIn << 7;
@@ -229,9 +258,16 @@ int main()
 
     U1 conv;
     float f = -16;
-    float arr[] = {1028, 256, 8, .0625, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    float arr[] = {1028, 256, 8, .0625, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0};
     float out[4];
 
-    genAFPHelper_b16(arr);
+    uint8_t result[17];
+    genAFPHelper_b16(arr,result);
     printF32("X", f);
+    for (int i = 0 ; i< 16 ;i ++)
+    {
+        printF32("x", arr[i]);
+    }
+
+
 }
