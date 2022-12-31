@@ -134,7 +134,7 @@ void genAFPHelper_b16(float *v_in, uint8_t* result)
 //TODO: handle when the input is denorm, NAN, and inf
 uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
 {
-    uint8_t result;
+    uint8_t result = 0;;
 
     //lsb (fourth most significant bit)
     bool lsb = (mantissaIn >> 19) & 0x1;
@@ -247,6 +247,7 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     else 
     {
         //offset small (offset <= 7), do NOTHING
+        offsetOut = offset;
         noop;
     }
     // ============================================================================
@@ -255,8 +256,8 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
 
 
     // pack values into AFP
-    result |= signIn << 7;
-    result |= offsetOut << 4;
+    result |= (signIn << 7);
+    result |= (offsetOut << 4);
     result |= mantissaOut;
 
     return result;
