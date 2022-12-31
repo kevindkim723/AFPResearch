@@ -45,7 +45,27 @@ void printAFP(uint8_t afp_block[])
         uint8_t mantissa = curr & 0xF;
         bool sign = curr >> 7;
 
-        //ERRONEOUS
+        if (offset == 0x7){
+            if (mantissa == 0)
+            {
+                // OFFSET = 3b111, MANTISSA = 4b0 represents 0
+                exp = 0;
+                mantissa = 0;
+            }
+            else{
+                // OFFSET = 3b111, MANTISSA > 0
+                // AFP is denorm, we need to use a leading one detector
+                uint8_t leadingOneOffset = findLeadingOneOffset(mantissa);
+                exp = exp - leadingOneOffset;
+                mantissa = mantissa << leadingOneOffset;
+            }
+        }
+        else{
+            //AFP not denorm, proceed normally
+
+        }
+
+        //ERRONEOUS... edit: fixed?
         conv.i |= (exp << 23);
         conv.i |= (mantissa << 19);
         conv.i |= (sign << 31);
@@ -268,7 +288,7 @@ int main()
 
     U1 conv;
     float f = -16;
-    float arr[] = {1028, 1024, 8, .0625, 256, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0};
+    float arr[] = {1028, 1024, 300, .0625, 256, 1000, 923.33, 56.2, 0, 0, 0, 0, 0, 0, 0, 0,0};
     float out[4];
 
     uint8_t result[17];
@@ -281,4 +301,18 @@ int main()
     printAFP(result);
 
 
+}
+/**
+ * @brief 
+ * returns the offset from MSB of leading one (must be geq 1)
+ * this is used when converting a denorm AFP to FP32. There is no implicit one so we must use a leading one detector.
+ * 
+ * @param mantissa 4 bit AFP mantisssa
+ * @return uint8_t offset of the leading one
+ */
+uint8_t findLeadingOneOffset(uint8_t mantissa){
+    if (mantissa>>3) return 1;
+    else if (mantissa>>2) return 2;
+    else if (mantissa>>1) return 3;
+    else return 4; //this shouldn't happen and by extension shouldn't matter.
 }
