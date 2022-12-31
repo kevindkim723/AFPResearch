@@ -27,15 +27,31 @@ void printF32(char *msg, float f)
 }
 
 /*
-prints msg, and the binary representation and floating point representation of f
+accepts msg and a 17-byte array of AFP values where the last element is AFP.
 NOTE: output can depend on machine endian-ness
 */
-void printF32_b(char *msg, float f)
+void printAFP(uint8_t afp_block[])
 {
+    uint8_t maxExp = afp_block[16] & 0xFF;
+    float f;
     U1 conv;
-    conv.f = f;
-    printf("%s: ", msg);
-    printf("0x%04x_%04x=%g\n", (conv.i >> 16), (conv.i & 0xFFFF), conv.f);
+    for (int i = 0; i < 15; i++)
+    {
+        conv.f = f;
+    
+        uint8_t curr  = afp_block[i];
+        uint8_t offset = (curr >> 4) & 0x7;
+        uint8_t exp = maxExp - offset;
+        uint8_t mantissa = curr & 0xF;
+        bool sign = curr >> 7;
+
+        //ERRONEOUS
+        conv.i |= (exp << 23);
+        conv.i |= (mantissa << 19);
+        conv.i |= (sign << 31);
+
+        printf("AFP %d: %.6f\n", i, conv.f);
+    }
 }
 
 //generates AFP for 16-element blocks
@@ -127,7 +143,7 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     bool guardBit = (mantissaIn >> 18) & 0x1;
 
     //if any of the bits more than 1 right of the LSB is 1, turn on the sticky
-    bool stickyBit = !!(mantissaIn & 0x3FFF);
+    bool stickyBit = !!(mantissaIn & 0x3FFFF);
 
     //obtain right-aligned 4 bit mantissa (implied leading 1)
     uint8_t mantissa = (mantissaIn >> 19) & 0xF;
@@ -188,16 +204,9 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
             // don't round up in this case
             mantissaOut = mantissa;
         }
-        else if (offsetGTseven)
-        {
-            // overflow = 1, offset >= 8
-            // since we overflow into a denorm number, we must consider the missing implicit one.
-            // TODO: handle this situation
-            mantissaOut = mantissa;
-        }
         else
         {
-            // overflow = 1, offset > 0 & offset != 8
+            // overflow = 1, offset > 0
             // we must subtract 1 from the offset and set mantissa = 0
             mantissaOut = 0;
             offset = offsetIn-1;
@@ -258,7 +267,7 @@ int main()
 
     U1 conv;
     float f = -16;
-    float arr[] = {1028, 256, 8, .0625, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0};
+    float arr[] = {1028, 1024, 8, .0625, 256, 1000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,0};
     float out[4];
 
     uint8_t result[17];
@@ -268,6 +277,7 @@ int main()
     {
         printF32("x", arr[i]);
     }
+    printAFP(result);
 
 
 }
