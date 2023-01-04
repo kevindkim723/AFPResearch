@@ -74,17 +74,54 @@ void printAFP(uint8_t afp_block[])
         conv.i |= (mantissa << 19);
         conv.i |= (sign << 31);
 
-        printf("AFP %d: %.15f\n", i, conv.f);
+        printf("AFP %d: %.8f\n", i, conv.f);
     }
 }
 
-//generates AFP for 16-element blocks
-char *genAFP_b16(float *v_in, __uint32_t size_in)
+void fprintAFP(FILE* fp, uint8_t afp_block[])
 {
+    uint8_t maxExp = afp_block[16] & 0xFF;
+    float f;
+    U1 conv;
+    for (int i = 0; i < 16; i++)
+    {
+        conv.f = f;
+    
+        uint8_t curr  = afp_block[i];
+        uint8_t offset = (curr >> 4) & 0x7;
+        uint8_t exp = maxExp - offset;
+        uint8_t mantissa = curr & 0xF;
+        bool sign = curr >> 7;
 
-    __uint32_t size_out = size_in;
-    //__uint32_t num_blocks = size_in/blockSize;
+        if (offset == 0x7){
+            if (mantissa == 0)
+            {
+                // OFFSET = 3b111, MANTISSA = 4b0 represents 0
+                exp = 0;
+                mantissa = 0;
+            }
+            else{
+                // OFFSET = 3b111, MANTISSA > 0
+                // AFP is denorm, we need to use a leading one detector
+                uint8_t leadingOneOffset = findLeadingOneOffset(mantissa);
+                exp = exp - leadingOneOffset;
+                mantissa = mantissa << leadingOneOffset;
+            }
+        }
+        else{
+            //AFP not denorm, proceed normally
+
+        }
+
+        //ERRONEOUS... edit: fixed?
+        conv.i |= (exp << 23);
+        conv.i |= (mantissa << 19);
+        conv.i |= (sign << 31);
+
+        fprintf(fp, "%.8f\n", conv.f);
+    }
 }
+
 
 /*
 genAFPHelper_b16

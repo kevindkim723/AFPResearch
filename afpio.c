@@ -26,6 +26,8 @@ void AFPReadWrite(){
     }
     fclose(fp);
 
+    fp = fopen("afp.out", "w");
+
 
     for (int i = 0; i < bufSize/16; i++){
         //input FP32 array
@@ -43,9 +45,10 @@ void AFPReadWrite(){
         genAFPHelper_b16(FP32_16, AFP_16);
 
         //print AFP values
-        printAFP(AFP_16);
+        fprintAFP(fp,AFP_16);
 
     }
+    fclose(fp);
 
     
 
