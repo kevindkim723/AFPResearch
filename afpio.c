@@ -1,3 +1,4 @@
+//kevin kim (kekim@hmc.edu)
 #include "afpgen.c"
 void AFPReadWrite(){
     FILE* fp = fopen("afp.in","r");
@@ -18,7 +19,6 @@ void AFPReadWrite(){
     int index=0;
 
     fp = fopen("afp.in","r");
-    printf("HEEEEE\n");
     while ((nread = getline(&line, &len, fp)) != -1){
         buf_FP32[index] = strtof(line, &pEnd);
         printf("%f\n",buf_FP32[index]);
