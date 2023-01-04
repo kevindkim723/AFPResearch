@@ -74,7 +74,7 @@ void printAFP(uint8_t afp_block[])
         conv.i |= (mantissa << 19);
         conv.i |= (sign << 31);
 
-        printf("AFP %d: %.6f\n", i, conv.f);
+        printf("AFP %d: %.15f\n", i, conv.f);
     }
 }
 
@@ -138,7 +138,7 @@ void genAFPHelper_b16(float *v_in, uint8_t* result)
     }
     
     //pack shared field
-    uint8_t shared;
+    uint8_t shared=0;
     shared |= maxExp;
     //shared |= (allPos << 7);
 
