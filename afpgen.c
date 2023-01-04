@@ -26,10 +26,14 @@ void printF32(char *msg, float f)
     printf("0x%04x_%04x=%g\n", (conv.i >> 16), (conv.i & 0xFFFF), conv.f);
 }
 
-/*
-accepts msg and a 17-byte array of AFP values where the last element is AFP.
-NOTE: output can depend on machine endian-ness
-*/
+/**
+ * @brief 
+ * accepts msg and a 17-byte array of AFP values where the last element is AFP.
+ * prints out the 16 AFP elements on newlines
+ * NOTE: output can depend on machine endian-ness
+ * 
+ * @param afp_block 17-byte AFP array
+ */
 void printAFP(uint8_t afp_block[])
 {
     uint8_t maxExp = afp_block[16] & 0xFF;
