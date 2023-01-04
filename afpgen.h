@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 void printF32(char *msg, float f);
 char *genAFP_b16(float *v_in, __uint32_t size_in);

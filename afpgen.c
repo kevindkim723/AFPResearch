@@ -140,7 +140,7 @@ void genAFPHelper_b16(float *v_in, uint8_t* result)
     //pack shared field
     uint8_t shared;
     shared |= maxExp;
-    shared |= (allPos << 7);
+    //shared |= (allPos << 7);
 
     //assign shared field as last element in the block
     result[16] = shared;
@@ -287,7 +287,7 @@ uint8_t roundNearestEven(bool signIn, uint32_t mantissaIn, uint8_t offsetIn)
     return result;
 }
 
-int main()
+int main2()
 {
 
     U1 conv;
