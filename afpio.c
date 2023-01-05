@@ -1,13 +1,18 @@
 //kevin kim (kekim@hmc.edu)
 #include "afpgen.c"
 void AFPReadWrite(){
+    //open file for reading
     FILE* fp = fopen("afp.in","r");
+
+    //count number of lines in file
     int numLines = countLines(fp);
     fclose(fp);
+
     int linesMod16 = numLines%16;
     int bufSize = linesMod16 == 0 ? numLines : numLines + (16-linesMod16);
     printf("%i\n",bufSize);
 
+    //allocate buffer that will store floats from input file
     float * buf_FP32 = calloc(bufSize, sizeof(float));
 
 
@@ -15,9 +20,9 @@ void AFPReadWrite(){
     char *pEnd;
     size_t nread; 
     size_t len;
-
     int index=0;
 
+    //parses each line, converts to float, and stores into buffer
     fp = fopen("afp.in","r");
     while ((nread = getline(&line, &len, fp)) != -1){
         buf_FP32[index] = strtof(line, &pEnd);
