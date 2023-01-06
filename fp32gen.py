@@ -1,4 +1,7 @@
 #Kevin Kim (kekim@hmc.edu)
+"""
+simple python script that generates N numbers of FP32 values in (LOWER, UPPER) and writes to afp.in
+"""
 from random import uniform
 
 f = open("afp.in", "w")
