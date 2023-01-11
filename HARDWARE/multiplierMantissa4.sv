@@ -1,12 +1,12 @@
 module afp_multiplier(
-    input logic [3:0] x, y,
+    input logic [4:0] x, y,
     output logic [3:0] pm,
-    output logic [2:0] po,
+    output logic [3:0] po,
     output logic ps);
 
     logic xs, ys;
     logic [1:0] xm, ym;
-    logic [1:0] xo, yo;
+    logic [2:0] xo, yo;
     assign ps = xs ^ ys;
     unpack UnpackX(.x(x), .xs(xs), .xm(xm), .xo(xo));
     unpack UnpackY(.x(y), .xs(ys), .xm(ym), .xo(yo));
@@ -15,16 +15,16 @@ module afp_multiplier(
 endmodule
 
 module unpack(
-    input logic [3:0] x,
-    output logic xs, [1:0] xm, [1:0] xo
+    input logic [4:0] x,
+    output logic xs, [1:0] xm, [2:0] xo
 );
 
 logic [1:0] xm_in;
 logic denorm;
 
 assign xs = x[3];
-assign xo = x[2:1];
-assign denorm = (xo == 2'b11);
+assign xo = x[3:1];
+assign denorm = (xo == 3'b111);
 assign xm_in = x[0];
 assign xm = (denorm) ? {xm_in, 1'b0} : {1'b1, xm_in};
 
@@ -34,22 +34,23 @@ module multiplier(
     input logic [1:0] xm,ym,
     output logic [3:0] pm
 );
-logic [3:0] xmym;
-assign xmym = {xm,ym};
-always_comb
-    case (xmym)
-        4'b1111: pm = 4'b1001;
-        4'b1010: pm = 4'b0100;
-        4'b1011: pm = 4'b0110;
-        4'b1110: pm = 4'b0110;
-        default: pm = 4'b0;
-    endcase
+
+assign a1 = xm[1] & ym[1];
+assign a2 = &xm;
+assign a3 = xm[0]^ym[0];
+assign a4 = xm[0] & ym[0];
+assign a5 = a1&a2;
+assign a6 = a1&a3;
+assign a7 = !a4 & a1;
+
+assign pm = {a5, a7, a6, a5};
+
 
 endmodule
 
 module adder(
-    input logic [1:0] yo,xo,
-    output logic [2:0] po
+    input logic [2:0] yo,xo,
+    output logic [3:0] po
 );
 
 assign po = yo+xo;
